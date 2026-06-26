@@ -54,4 +54,9 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(Bookmark::class);
     }
+    // $user()->tags...
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
 }
