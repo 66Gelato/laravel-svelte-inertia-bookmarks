@@ -20,6 +20,34 @@
     
     // from BookmarkController
     let { bookmarks } = $props();
+
+    let search = $state('');
+    let selectedTag = $state<string | null>(null);
+
+    // every unique tag name across all bookmarks , for the filter buttons 
+    let allTags = $derived.by(() => {
+        const names = new Set<string>();
+        for (const b of bookmarks) {
+          for (const t of b.tags) names.add(t.name);
+        }
+        return [...names].sort();
+    });
+
+    let filtered = $derived.by(() => {
+      const term = search.trim().toLowerCase();
+      return bookmarks.filter((b) => {
+        const matchesSearch =
+          term === '' ||
+          b.title.toLowerCase().includes(term) ||
+          b.url.toLowerCase().includes(term) ||
+          (b.description?.toLowerCase().includes(term) ?? false);
+
+        const matchesTag =
+          selectedTag === null || b.tags.some((t) => t.name === selectedTag);
+
+        return matchesSearch && matchesTag;
+      });
+  });
 </script>
 
 <AppHead title="Bookmarks" />
@@ -73,4 +101,64 @@
       </li>
     {/each}
   </ul>
+
+
+  <!-- search + tag filters -->
+  <div class="flex flex-col gap-3">
+    <Input
+      type="text"
+      placeholder="Search bookmarks..."
+      bind:value={search}
+      class="max-w-md"
+    />
+
+    {#if allTags.length}
+      <div class="flex flex-wrap gap-2">
+        <Button
+          variant={selectedTag === null ? 'default' : 'outline'}
+          size="sm"
+          onclick={() => (selectedTag = null)}
+        >
+          All
+        </Button>
+        {#each allTags as tag (tag)}
+          <Button
+            variant={selectedTag === tag ? 'default' : 'outline'}
+            size="sm"
+            onclick={() => (selectedTag = tag)}
+          >
+            {tag}
+          </Button>
+        {/each}
+      </div>
+    {/if}
+  </div>
+
+  <!-- the list now renders `filtered` -->
+  <ul class="space-y-2">
+    {#each filtered as bookmark (bookmark.id)}
+      <li>
+        <a href={bookmark.url} target="_blank" class="font-medium underline">{bookmark.title}</a>
+        {#if bookmark.description}
+          <span class="text-muted-foreground"> — {bookmark.description}</span>
+        {/if}
+        {#if bookmark.tags.length}
+          <div class="mt-1 flex gap-1">
+            {#each bookmark.tags as tag (tag.id)}
+              <button
+                class="rounded bg-muted px-2 py-0.5 text-xs hover:bg-muted-foreground/20"
+                onclick={() => (selectedTag = tag.name)}
+              >
+                {tag.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </li>
+    {/each}
+  </ul>
+
+  {#if filtered.length === 0}
+    <p class="text-muted-foreground">No bookmarks match.</p>
+  {/if}
 </div>
